@@ -6,13 +6,13 @@ def extract_data(first, second, third, fourth):
     """
     Extract csv files for four files
     """
-    parse_dates = ['ClaimStartDt','DOB','ClaimEndDt','AdmissionDt','DOD','DischargeDt']
 
     first_df = pd.read_csv(first,parse_dates=['ClaimStartDt','ClaimEndDt','AdmissionDt','DischargeDt'])
     second_df = pd.read_csv(second, parse_dates=['ClaimStartDt','ClaimEndDt'])
     third_df = pd.read_csv(third,parse_dates=['DOB','DOD'])
     fourth_df = pd.read_csv(fourth)
     return first_df, second_df, third_df, fourth_df
+
 
 
 def procedure_update(data):
@@ -76,13 +76,16 @@ def update_inpatient(df):
     '''
     df['Inpatient'] = 1
     df['DeductibleAmtPaid'] = df['DeductibleAmtPaid'].fillna(float(df['DeductibleAmtPaid'].mode()))
+    df['ClmAdmitDiagnosisCode'] = df['ClmAdmitDiagnosisCode'].apply(lambda x: 1 if(pd.notnull(x)) else 0)
     df = procedure_update(df)
     df = diagnosis_count(df)
     none_features = ['ClmDiagnosisCode_1','ClmDiagnosisCode_2','ClmDiagnosisCode_3','ClmDiagnosisCode_4',\
                     'ClmDiagnosisCode_5','ClmDiagnosisCode_6','ClmDiagnosisCode_7','ClmDiagnosisCode_8',\
-                   'ClmDiagnosisCode_9','ClmDiagnosisCode_10','OperatingPhysician','ClmAdmitDiagnosisCode',\
+                   'ClmDiagnosisCode_9','ClmDiagnosisCode_10','OperatingPhysician',\
                 'OtherPhysician','AttendingPhysician']
     df = fill_none_missing(df,none_features)
+    df.drop(['DiagnosisGroupCode'], inplace=True, axis=1)
+    
     return df
 
 def update_outpatient(df):
@@ -93,11 +96,13 @@ def update_outpatient(df):
 
     df = procedure_update(df)
     df = diagnosis_count(df)
+    df['ClmAdmitDiagnosisCode'] = df['ClmAdmitDiagnosisCode'].apply(lambda x: 1 if(pd.notnull(x)) else 0)
     none_features = ['ClmDiagnosisCode_1','ClmDiagnosisCode_2','ClmDiagnosisCode_3','ClmDiagnosisCode_4',\
                     'ClmDiagnosisCode_5','ClmDiagnosisCode_6','ClmDiagnosisCode_7','ClmDiagnosisCode_8',\
-                   'ClmDiagnosisCode_9','ClmDiagnosisCode_10','OperatingPhysician','ClmAdmitDiagnosisCode',\
+                   'ClmDiagnosisCode_9','ClmDiagnosisCode_10','OperatingPhysician',\
                 'OtherPhysician','AttendingPhysician']
     df = fill_none_missing(df, none_features)
+    return df
 
 def update_train(df):
     '''
@@ -118,7 +123,7 @@ def update_bene(df):
            'ChronicCond_Osteoporasis', 'ChronicCond_rheumatoidarthritis',
            'ChronicCond_stroke']
 
-    df['RenalDiseaseIndicator'] = df['RenalDiseaseIndicator'].replace(['0', 'Y'], [0, 1], inplace=True)
+    df['RenalDiseaseIndicator'] = df['RenalDiseaseIndicator'].str.replace('Y', '1').astype('float')
 
     for col in Chron_Conditions:
         df[col].replace({2:0}, inplace=True)
@@ -142,7 +147,7 @@ def combine_df(in_,out_,be,tr):
 
     patients = pd.concat([inpatient, outpatient], axis=0, ignore_index=True, sort=False)
     patients['Inpatient'] = patients['Inpatient'].fillna(0)
-    pat_none_feat = ['AdmissionDt','DischargeDt','DiagnosisGroupCode']
+    pat_none_feat = ['AdmissionDt','DischargeDt']
     patients = fill_none_missing(patients,pat_none_feat)
 
     merge_1 = pd.merge(left = patients, right = bene, on = 'BeneID')
@@ -159,4 +164,5 @@ pd.set_option('display.max_columns', None)
 
 df = combine_df('Train_Inpatientdata.csv','Train_Outpatientdata.csv','Train_Beneficiarydata.csv','Train.csv')
 df.to_csv('Preprocess.csv', index=False)
+
 
