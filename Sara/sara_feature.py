@@ -53,6 +53,16 @@ def proc_codes (data):
 		data[str(col)+'_proc'] = np.where((data[proc_cols].eq(col)).any(1, skipna=True), 1, 0)
 	return data
 
+def state_codes (data):
+	"""
+    This function creates features for the most frequent states.
+    """
+	state_codes = [5, 10, 33, 45, 14, 39]
+
+	for col in state_codes:
+		data[str(col)+'_state'] = np.where((data['State'].eq(col)), 1, 0)
+	return data
+
 def duplicate_claims (data):
     """
     This function creates a feature that codes for whether a claim is a duplicate.
@@ -122,7 +132,8 @@ def groupby_provider(data):
                             '2449_diag','4019_diag','25000_diag','42731_diag',\
                             '4019_proc','9904_proc', '2724_proc', '8154_proc', '66_proc',\
                             '3893_proc', '3995_proc', '4516_proc', '3722_proc', '8151_proc',\
-                            '8872_proc']].sum().reset_index() 
+                            '8872_proc','5_state','10_state','33_state','45_state','14_state',
+                            '39_state']].sum().reset_index() 
     
     mean_features = data.groupby('Provider')[['Patient_Connections','AttPhys_Connections','InscClaimAmtReimbursed',\
                             'DeductibleAmtPaid','treatment_days','Gender', 'IPAnnualReimbursementAmt',\
@@ -143,12 +154,13 @@ def transform_data(data):
     data2 = age(data1)
     data3 = diag_codes(data2)
     data4 = proc_codes(data3)
-    data5 = duplicate_claims(data4)
-    data6 = duration(data5)
-    data7 = network_connections(data6)
-    data8 = groupby_provider(data7)
+    data5 = state_codes(data4)
+    data6 = duplicate_claims(data5)
+    data7 = duration(data6)
+    data8 = network_connections(data7)
+    data9 = groupby_provider(data8)
 
-    return data8
+    return data9
 
 data = transform_data(data)
 data.to_csv('final_features.csv', index=False)
